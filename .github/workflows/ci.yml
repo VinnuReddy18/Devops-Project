@@ -1,0 +1,98 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "master", "main" ]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: Build, Secure, and Deploy
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Checkout Code
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      # 2. Setup Java Runtime
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      # 3. Linting: Enforce coding standards (Checkstyle)
+      # Prevents technical debt by ensuring code follows consistent style rules.
+      - name: Linting (Checkstyle)
+        run: mvn checkstyle:check
+
+      # 4. Unit Tests: Validate business logic
+      # Prevents regressions by running JUnit tests.
+      - name: Unit Tests
+        run: mvn test
+
+      # 5. SAST: Static Application Security Testing (SpotBugs)
+      # Detects code-level vulnerabilities and bugs without executing the code.
+      - name: SAST (SpotBugs)
+        run: mvn spotbugs:check
+        continue-on-error: true # Proceed even if minor bugs are found (for demo)
+
+      # 6. SCA: Software Composition Analysis (Trivy FS)
+      # Detects vulnerable dependencies (supply-chain risks) in the file system.
+      - name: SCA (Trivy FileSystem Scan)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          exit-code: '0' 
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+
+      # 7. Build: Package the application
+      - name: Build with Maven
+        run: mvn package -DskipTests
+
+      # 8. Docker Build: Create container image
+      - name: Docker Build
+        run: docker build -t myapp:${{ github.sha }} .
+
+      # 9. Image Scan: Detect container vulnerabilities (Trivy)
+      # Ensures that the base OS and installed libraries in the container are safe.
+      - name: Image Scan (Trivy)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'myapp:${{ github.sha }}'
+          format: 'table'
+          exit-code: '0' # Fail build if critical vulnerabilities found: set to '1' in production
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+
+      # 10. Runtime Test: Validate container behavior (Smoke Test)
+      # Ensures the image is actually runnable and endpoints are responsive.
+      - name: Runtime Test (Smoke Test)
+        run: |
+          docker run -d -p 8080:8080 --name test-container myapp:${{ github.sha }}
+          echo "Waiting for service to start..."
+          sleep 30 
+          curl -f http://localhost:8080/api/math/prime/7 || exit 1
+          echo "Smoke Test Passed!"
+          docker stop test-container
+
+      # 11. Registry Push: Publish trusted image
+      # Login and push to DockerHub.
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+        if: github.event_name != 'pull_request'
+
+      - name: Docker Push
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'
+        run: |
+          docker tag myapp:${{ github.sha }} ${{ secrets.DOCKERHUB_USERNAME }}/java-cicd-project:${{ github.sha }}
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/java-cicd-project:${{ github.sha }}
+          docker tag myapp:${{ github.sha }} ${{ secrets.DOCKERHUB_USERNAME }}/java-cicd-project:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/java-cicd-project:latest
