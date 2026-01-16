@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Sets the namespace for all resources
+namespace: java-cicd-ns
+
+resources:
+- namespace.yaml
+- configmap.yaml
+- deployment.yaml
+- service.yaml
+
+# Modifies the image name (Optional: easier way to manage tags)
+images:
+- name: docker.io/${DOCKERHUB_USERNAME}/java-cicd-project
+  newName: docker.io/vinayreddy18/java-cicd-project
+  newTag: latest

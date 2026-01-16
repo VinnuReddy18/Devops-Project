@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: java-cicd-config
+data:
+  # Example configuration properties
+  APP_ENV: "local-k8s"
+  LOG_LEVEL: "DEBUG"
