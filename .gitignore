@@ -1,0 +1,24 @@
+# Maven
+target/
+*.jar
+*.war
+*.ear
+*.log
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+
+# Eclipse
+.settings/
+.classpath
+.project
+
+# OS
+.DS_Store
+Thumbs.db
+
+# GitHub Actions Runner (Self-Hosted)
+actions-runner/
+_work/

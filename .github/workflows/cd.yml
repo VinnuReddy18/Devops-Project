@@ -1,0 +1,32 @@
+name: CD Pipeline (Kubernetes)
+
+on:
+  workflow_run:
+    workflows: ["CI/CD Pipeline"]
+    types:
+      - completed
+  workflow_dispatch:
+
+jobs:
+  deploy-to-k8s:
+    # "self-hosted" means this job runs on YOUR laptop, not GitHub's servers.
+    # This gives it access to your local Kubernetes (Docker Desktop).
+    runs-on: self-hosted
+    
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Kubernetes
+        run: |
+          echo "Connected to Self-Hosted Runner."
+          echo "Deploying manifests to Local Kubernetes..."
+          
+          # Apply the manifests locally
+          kubectl apply -k k8s/
+          
+          # Restart the deployment to ensure the new image is pulled
+          kubectl rollout restart deployment/java-cicd-app -n java-cicd-ns
+          
+          echo "Deployment Successful!"
