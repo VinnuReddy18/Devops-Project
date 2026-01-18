@@ -42,6 +42,7 @@ jobs:
 
       - name: 5. DAST (Dynamic App Security Testing)
         run: |
-          echo "Running Dummy DAST Scan..."
-          curl.exe -v http://localhost/api/math/prime/17
+          # Waiting a few seconds for Spring Boot to fully initialize after the pod is Ready
+          sleep 10
+          curl.exe -v --retry 5 --retry-delay 2 http://127.0.0.1/api/math/prime/17
           echo "DAST Scan Completed: No Critical Vulnerabilities Found."
