@@ -43,5 +43,5 @@ jobs:
       - name: 5. DAST (Dynamic App Security Testing)
         run: |
           echo "Running Dummy DAST Scan..."
-          curl -v http://localhost/api/math/prime/17
+          curl.exe -v http://localhost/api/math/prime/17
           echo "DAST Scan Completed: No Critical Vulnerabilities Found."
