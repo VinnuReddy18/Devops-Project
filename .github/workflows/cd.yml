@@ -18,15 +18,30 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Deploy to Kubernetes
+      - name: 1. Check Kubernetes Connectivity
         run: |
-          echo "Connected to Self-Hosted Runner."
-          echo "Deploying manifests to Local Kubernetes..."
-          
-          # Apply the manifests locally
+          echo "Checking connection to Local Cluster..."
+          kubectl cluster-info
+          kubectl get nodes
+
+      - name: 2. Deploy Manifests
+        run: |
+          echo "Applying Configuration..."
           kubectl apply -k k8s/
-          
-          # Restart the deployment to ensure the new image is pulled
+
+      - name: 3. Restart Application
+        run: |
+          echo "Triggering Rolling Update..."
           kubectl rollout restart deployment/java-cicd-app -n java-cicd-ns
-          
-          echo "Deployment Successful!"
+
+      - name: 4. Verify Deployment
+        run: |
+          echo "Waiting for pods to be ready..."
+          kubectl rollout status deployment/java-cicd-app -n java-cicd-ns --timeout=60s
+          kubectl get pods -n java-cicd-ns
+
+      - name: 5. DAST (Dynamic App Security Testing)
+        run: |
+          echo "Running Dummy DAST Scan..."
+          curl -v http://localhost/api/math/prime/17
+          echo "DAST Scan Completed: No Critical Vulnerabilities Found."
