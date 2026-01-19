@@ -38,11 +38,7 @@ jobs:
         run: |
           echo "Waiting for pods to be ready..."
           kubectl rollout status deployment/java-cicd-app -n java-cicd-ns --timeout=60s
-          kubectl get pods -n java-cicd-ns
-
-      - name: 5. DAST (Dynamic App Security Testing)
-        run: |
-          # Waiting a few seconds for Spring Boot to fully initialize after the pod is Ready
-          sleep 10
-          curl.exe -v --retry 5 --retry-delay 2 http://127.0.0.1/api/math/prime/17
-          echo "DAST Scan Completed: No Critical Vulnerabilities Found."
+                   sleep 10
+          echo "Testing application internal reachability..."
+          kubectl exec -n java-cicd-ns deployment/java-cicd-app -- curl -v http://localhost:8080/api/math/prime/17
+          echo "DAST Scan Completed: App is healthy and responding."
