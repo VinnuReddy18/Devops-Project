@@ -38,7 +38,7 @@ jobs:
         run: |
           echo "Waiting for pods to be ready..."
           kubectl rollout status deployment/java-cicd-app -n java-cicd-ns --timeout=60s
-                   sleep 10
+          sleep 10
           echo "Testing application internal reachability..."
           kubectl exec -n java-cicd-ns deployment/java-cicd-app -- curl -v http://localhost:8080/api/math/prime/17
           echo "DAST Scan Completed: App is healthy and responding."
