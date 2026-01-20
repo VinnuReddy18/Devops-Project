@@ -37,10 +37,11 @@ This project includes a secondary pipeline `.github/workflows/cd.yml` that trigg
 1.  **Trigger**: Runs only when the "CI/CD Pipeline" completes successfully.
 2.  **Deploy**: Uses `kubectl` to apply the manifests in `k8s/` to a live cluster.
 
-### A Note on Local Deployment
-Since the Kubernetes cluster is running on your **local machine** (Docker Desktop/Minikube), GitHub Actions (running in the cloud) **cannot** access it directly.
-- The `cd.yml` file is provided as a **Reference Implementation** for how production deployment works.
-- To deploy locally, you must run: `kubectl apply -k k8s/` from your terminal.
+### A Note on Local Deployment (Self-Hosted Runner)
+Since the Kubernetes cluster is running on your **local machine** (Docker Desktop), we use a **GitHub Actions Self-Hosted Runner**.
+- The runner acts as a bridge: it listens for jobs from GitHub but executes them on your local machine.
+- This allows the `cd.yml` pipeline to execute `kubectl` commands directly against your local cluster, enabling **true automated CD** even for localhost.
+- **Setup**: The runner must be installed and running (`./run.cmd`) on the host machine for the CD stage to pick up the job.
 
 ## How to Run
 
@@ -60,8 +61,15 @@ To enable the "Registry Push" stage, you must configure the following **GitHub S
 1. `DOCKERHUB_USERNAME`: Your DockerHub username.
 2. `DOCKERHUB_TOKEN`: Your DockerHub Access Token (Profile -> Security -> New Access Token).
 
-## Local Kubernetes Deployment (CD)
-To simulate the "Continuous Deployment" phase locally using Kubernetes:
+## Automated CD (via Self-Hosted Runner)
+To trigger the automated deployment:
+1.  Ensure your **Self-Hosted Runner** is online.
+2.  Push a commit to `main`.
+3.  Wait for the CI pipeline to pass.
+4.  The CD pipeline will automatically start, build the manifests, and deploy to your local Docker Desktop Kubernetes.
+
+## Manual Deployment (Fallback)
+If you are not using a self-hosted runner, you can deploy manually:
 
 1.  **Prerequisites**: Ensure you have a local Kubernetes cluster running (e.g., Docker Desktop k8s, Minikube, or Kind) and `kubectl` configured.
 2.  **Edit Manifest**: Open `k8s/deployment.yaml` and replace `${DOCKERHUB_USERNAME}` with your actual DockerHub username.
@@ -92,6 +100,3 @@ To simulate the "Continuous Deployment" phase locally using Kubernetes:
 ## Security & Quality Gates
 - **Quality**: The build will fail if Unit Tests fail or if Checkstyle finds violations.
 - **Security**: The build is configured to scan for vulnerabilities (SCA/SAST). Critical vulnerabilities in the container image can be configured to break the build (currently set to exit 0 for demo purposes).
-
-## Why This Pipeline?
-This pipeline implements "Shift-Left" security by scanning for vulnerabilities *before* deployment. It ensures that only tested, secure, and valid images are pushed to the registry, adhering to DevSecOps principles.
